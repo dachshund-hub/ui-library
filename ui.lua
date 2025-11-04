@@ -5,6 +5,9 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local task = task or {} -- Fallback for very old executors
+task.wait = task.wait or wait
+task.spawn = task.spawn or spawn
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -122,7 +125,7 @@ function DachshundUI:CreateWindow(options)
     self.Options = options
 
     if options.Theme then
-        for key, value in pairs(options.Theme, DEFAULTS.Theme) do
+        for key, value in pairs(options.Theme) do
             DEFAULTS.Theme[key] = value
         end
     end
@@ -148,7 +151,8 @@ function DachshundUI:CreateWindow(options)
     function self:Notify(message, type)
         type = type or "info"
         if #self.NotificationContainer:GetChildren() - 1 >= DEFAULTS.Notification.MaxNotifications then
-            self.NotificationContainer:GetChildren()[2]:Destroy()
+            local children = self.NotificationContainer:GetChildren()
+            if children[2] then children[2]:Destroy() end
         end
 
         local notif = CreateRoundedFrame({
@@ -173,9 +177,11 @@ function DachshundUI:CreateWindow(options)
         notifLabel.Parent = notif
 
         Animate(notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.3)
-        wait(DEFAULTS.Notification.Duration)
-        Animate(notif, {Position = UDim2.new(0, 0, -60, 0)}, 0.3).Completed:Connect(function()
-            notif:Destroy()
+        task.spawn(function()
+            task.wait(DEFAULTS.Notification.Duration)
+            Animate(notif, {Position = UDim2.new(0, 0, -60, 0)}, 0.3).Completed:Connect(function()
+                notif:Destroy()
+            end)
         end)
     end
 
@@ -435,8 +441,8 @@ function DachshundUI:AddButton(text, callback, options)
         Animate(btn, {Size = UDim2.new(0.8, 0, 0.8, 0)}, 0.1)
     end)
     btn.MouseButton1Click:Connect(function()
-        callback and callback()
-        options.Notify and self:Notify(options.Notify, "success")
+        if callback then callback() end
+        if options.Notify then self:Notify(options.Notify, "success") end
     end)
 
     self:AddCard("Button", btnFrame, options)
@@ -551,31 +557,35 @@ function DachshundUI:AddSlider(labelText, min, max, default, callback, options)
 
     local sliderDragging = false
     local currentValue = default or min
+    local sliderConnection
 
     sliderThumb.MouseButton1Down:Connect(function()
         sliderDragging = true
+        sliderConnection = UserInputService.InputChanged:Connect(function(input)
+            if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mouse = player:GetMouse()
+                local relativeX = math.clamp((mouse.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+                currentValue = math.floor(min + (max - min) * relativeX)
+                
+                local duration = options.Duration or DEFAULTS.Theme.AnimDuration
+                Animate(sliderTrack, {Size = UDim2.new(relativeX, 0, 1, 0)}, duration)
+                Animate(sliderThumb, {Position = UDim2.new(relativeX, -6, 0, 0)}, duration)
+                Animate(valueLabel, {TextTransparency = 0.5}, 0.1).Completed:Connect(function()
+                    valueLabel.Text = tostring(currentValue)
+                    Animate(valueLabel, {TextTransparency = 0}, 0.1)
+                end)
+                if callback then callback(currentValue) end
+            end
+        end)
     end)
 
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             sliderDragging = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouse = player:GetMouse()
-            local relativeX = math.clamp((mouse.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-            currentValue = math.floor(min + (max - min) * relativeX)
-            
-            local duration = options.Duration or DEFAULTS.Theme.AnimDuration
-            Animate(sliderTrack, {Size = UDim2.new(relativeX, 0, 1, 0)}, duration)
-            Animate(sliderThumb, {Position = UDim2.new(relativeX, -6, 0, 0)}, duration)
-            Animate(valueLabel, {TextTransparency = 0.5}, 0.1).Completed:Connect(function()
-                valueLabel.Text = tostring(currentValue)
-                Animate(valueLabel, {TextTransparency = 0}, 0.1)
-            end)
-            if callback then callback(currentValue) end
+            if sliderConnection then
+                sliderConnection:Disconnect()
+                sliderConnection = nil
+            end
         end
     end)
 
@@ -765,31 +775,33 @@ function DachshundUI:AddKeybind(labelText, default, callback, options)
 
     local binding = false
     local pulse = nil
+    local bindConnection
 
     keyBtn.MouseButton1Click:Connect(function()
         binding = true
         keyBtn.Text = "..."
         pulse = TweenService:Create(keyBtn, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Size = UDim2.new(0, 45, 0, 22.5)})
         pulse:Play()
-    end)
-
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if binding and not gameProcessed then
-            local keyName = input.KeyCode.Name
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
-                keyName = "MB2"
-            elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-                keyName = "MB1"
+        bindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if binding and not gameProcessed then
+                local keyName = input.KeyCode.Name
+                if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                    keyName = "MB2"
+                elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    keyName = "MB1"
+                end
+                keyBtn.Text = keyName
+                binding = false
+                if pulse then
+                    pulse:Cancel()
+                    pulse = nil
+                end
+                Animate(keyBtn, {Size = UDim2.new(0, 50, 0, 25)}, 0.15)
+                if callback then callback(keyName) end
+                bindConnection:Disconnect()
+                bindConnection = nil
             end
-            keyBtn.Text = keyName
-            binding = false
-            if pulse then
-                pulse:Cancel()
-                pulse = nil
-            end
-            Animate(keyBtn, {Size = UDim2.new(0, 50, 0, 25)}, 0.15)
-            if callback then callback(keyName) end
-        end
+        end)
     end)
 
     self:AddCard("Keybind", keybindFrame, options)
