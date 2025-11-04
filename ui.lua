@@ -1,12 +1,7 @@
 -- Dachshund Hub UI Library
--- A simple animated Roblox exploit UI library with tabs, sections, and various elements.
--- Usage:
--- local Library = loadstring(game:HttpGet("your_script_url"))() -- or paste directly
--- local Window = Library:CreateWindow("Dachshund Hub")
--- local Tab1 = Window:CreateTab("Tab 1")
--- Tab1:Section("Section 1")
--- Tab1:Button("Click Me", function() print("Clicked!") end)
--- etc.
+-- Enhanced with automatic parenting handling, multi-tab support, and vertical stacking (1 under 1) via UIListLayout.
+-- Elements are automatically parented to the current section or tab content, stacked vertically.
+-- Usage remains the same as before.
 
 local Library = {}
 local TweenService = game:GetService("TweenService")
@@ -22,7 +17,7 @@ function Library:CreateWindow(title)
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = title .. " Hub"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = game:GetService("CoreGui") -- For exploits; use PlayerGui for normal Roblox
+    ScreenGui.Parent = game:GetService("CoreGui")
     
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
@@ -39,7 +34,7 @@ function Library:CreateWindow(title)
     MainCorner.Parent = MainFrame
     
     local MainStroke = Instance.new("UIStroke")
-    MainStroke.Color = Color3.new(0, 0.5, 1) -- Blue outline
+    MainStroke.Color = Color3.new(0, 0.5, 1)
     MainStroke.Thickness = 2
     MainStroke.Parent = MainFrame
     
@@ -57,7 +52,7 @@ function Library:CreateWindow(title)
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
     TitleLabel.Parent = MainFrame
     
-    -- Tab Container (Horizontal)
+    -- Tab Container (Horizontal tabs under title)
     local TabContainer = Instance.new("ScrollingFrame")
     TabContainer.Name = "TabContainer"
     TabContainer.Size = UDim2.new(1, 0, 0, 30)
@@ -74,7 +69,7 @@ function Library:CreateWindow(title)
     TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     TabLayout.Parent = TabContainer
     
-    -- Divider
+    -- Divider under tabs
     local DividerFrame = Instance.new("Frame")
     DividerFrame.Name = "Divider"
     DividerFrame.Size = UDim2.new(1, 0, 0, 1)
@@ -83,7 +78,7 @@ function Library:CreateWindow(title)
     DividerFrame.BorderSizePixel = 0
     DividerFrame.Parent = MainFrame
     
-    -- Content Container
+    -- Content Container (vertical stacking for elements, 1 under 1)
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -60)
@@ -92,33 +87,45 @@ function Library:CreateWindow(title)
     ContentContainer.Parent = MainFrame
     
     local ContentLayout = Instance.new("UIListLayout")
+    ContentLayout.FillDirection = Enum.FillDirection.Vertical -- Ensures 1 under 1 stacking
     ContentLayout.Padding = UDim.new(0, 5)
+    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ContentLayout.Parent = ContentContainer
     
     local tabs = {}
     local currentTab = nil
     local currentSection = nil
+    local keybinds = {}
     
     local function switchTab(tab)
         if currentTab then
             currentTab.Visible = false
-            -- Animate out
             TweenService:Create(currentTab, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
         end
         currentTab = tab.content
         currentTab.Visible = true
-        -- Animate in
         tab.content.Size = UDim2.new(1, 0, 0, 0)
         TweenService:Create(tab.content, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 1, 0)}):Play()
         
-        -- Highlight tab button
         for _, t in pairs(tabs) do
             TweenService:Create(t.button, createTweenInfo(0.2), {BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)}):Play()
         end
         TweenService:Create(tab.button, createTweenInfo(0.2), {BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)}):Play()
     end
     
-    function Window:CreateTab(name)
+    -- Global keybind handler
+    local inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            for _, kb in ipairs(keybinds) do
+                if kb.key == input.KeyCode then
+                    kb.callback()
+                end
+            end
+        end
+    end)
+    
+    local function CreateTab(name)
         local tabButton = Instance.new("TextButton")
         tabButton.Name = name .. "Tab"
         tabButton.Size = UDim2.new(0, 80, 1, 0)
@@ -134,17 +141,29 @@ function Library:CreateWindow(title)
         tabCorner.CornerRadius = UDim.new(0, 4)
         tabCorner.Parent = tabButton
         
-        local tabContent = Instance.new("Frame")
+        local tabContent = Instance.new("ScrollingFrame") -- Use ScrollingFrame for content to handle overflow
         tabContent.Name = name .. "Content"
         tabContent.Size = UDim2.new(1, 0, 1, 0)
         tabContent.Position = UDim2.new(0, 0, 0, 0)
         tabContent.BackgroundTransparency = 1
+        tabContent.BorderSizePixel = 0
+        tabContent.ScrollBarThickness = 8
+        tabContent.ScrollBarImageColor3 = Color3.new(0, 0.5, 1)
         tabContent.Visible = false
         tabContent.Parent = ContentContainer
         
         local tabContentLayout = Instance.new("UIListLayout")
+        tabContentLayout.FillDirection = Enum.FillDirection.Vertical -- 1 under 1
         tabContentLayout.Padding = UDim.new(0, 5)
+        tabContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
         tabContentLayout.Parent = tabContent
+        
+        local tabUIPadding = Instance.new("UIPadding")
+        tabUIPadding.PaddingTop = UDim.new(0, 5)
+        tabUIPadding.PaddingBottom = UDim.new(0, 5)
+        tabUIPadding.PaddingLeft = UDim.new(0, 5)
+        tabUIPadding.PaddingRight = UDim.new(0, 5)
+        tabUIPadding.Parent = tabContent
         
         local tab = {button = tabButton, content = tabContent}
         table.insert(tabs, tab)
@@ -153,7 +172,6 @@ function Library:CreateWindow(title)
             switchTab(tab)
         end)
         
-        -- Hover animations for tab
         tabButton.MouseEnter:Connect(function()
             if currentTab ~= tab.content then
                 TweenService:Create(tabButton, createTweenInfo(0.2), {BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)}):Play()
@@ -165,12 +183,11 @@ function Library:CreateWindow(title)
             end
         end)
         
-        -- Auto-switch to first tab
         if #tabs == 1 then
             switchTab(tab)
         end
         
-        -- Chainable elements
+        -- Chainable methods for automatic parenting
         tab.Section = Section
         tab.Button = Button
         tab.Toggle = Toggle
@@ -179,41 +196,39 @@ function Library:CreateWindow(title)
         tab.MultiDropdown = MultiDropdown
         tab.TextInput = TextInput
         tab.Divider = Divider
+        tab.Keybind = Keybind
         
         return tab
     end
     
-    local Window = {CreateTab = Window.CreateTab}
-    
-    -- Element Creators (generic, add to currentSection or currentTab.content)
-    local function addToContainer(parent)
-        return function(element)
-            if currentSection then
-                element.Parent = currentSection
-            else
-                element.Parent = currentTab and currentTab.content or ContentContainer
-            end
-            return element
+    -- Automatic parenting handler
+    local function addToContainer(element)
+        local targetParent = currentSection or (currentTab and currentTab.content) or ContentContainer
+        element.Parent = targetParent
+        -- Update canvas size for scrolling
+        if currentTab then
+            currentTab.CanvasSize = UDim2.new(0, 0, 0, currentTab.AbsoluteContentSize.Y)
         end
+        return element
     end
     
-    local function createElement(parent, props)
+    local function createElement(props)
         local frame = Instance.new(props.type or "Frame")
         for k, v in pairs(props) do
-            if k ~= "type" then frame[k] = v end
+            if k ~= "type" then
+                frame[k] = v
+            end
         end
-        addToContainer(parent)(frame)
-        return frame
+        return addToContainer(frame)
     end
     
-    -- Section
+    -- Section (groups elements vertically)
     local function Section(name)
-        local section = createElement(currentTab and currentTab.content or ContentContainer, {
+        local section = createElement({
             type = "Frame",
-            Size = UDim2.new(1, 0, 0, 0),
+            Size = UDim2.new(1, -10, 0, 0), -- Auto-size height via layout
             BackgroundColor3 = Color3.new(0.05, 0.05, 0.05),
-            BorderSizePixel = 0,
-            BackgroundTransparency = 0
+            BorderSizePixel = 0
         })
         local sectionCorner = Instance.new("UICorner")
         sectionCorner.CornerRadius = UDim.new(0, 4)
@@ -228,19 +243,20 @@ function Library:CreateWindow(title)
         sectionTitle.Font = Enum.Font.SourceSansBold
         sectionTitle.Parent = section
         
-        local sectionContent = createElement(section, {
+        local sectionContent = createElement({
             type = "Frame",
-            Size = UDim2.new(1, -10, 1, -25),
-            Position = UDim2.new(0, 5, 0, 25),
+            Size = UDim2.new(1, 0, 1, -25),
+            Position = UDim2.new(0, 0, 0, 25),
             BackgroundTransparency = 1
         })
         local sectionLayout = Instance.new("UIListLayout")
+        sectionLayout.FillDirection = Enum.FillDirection.Vertical
         sectionLayout.Padding = UDim.new(0, 2)
         sectionLayout.Parent = sectionContent
         
-        -- Animate section expand
-        section.Size = UDim2.new(1, 0, 0, 0)
-        TweenService:Create(section, createTweenInfo(0.3), {Size = UDim2.new(1, 0, 0, sectionContent.AbsoluteSize.Y + 30)}):Play()
+        -- Animate section appearance
+        section.Size = UDim2.new(1, -10, 0, 0)
+        TweenService:Create(section, createTweenInfo(0.3), {Size = UDim2.new(1, -10, 0, section.AbsoluteSize.Y)}):Play()
         
         currentSection = sectionContent
         return sectionContent
@@ -248,7 +264,7 @@ function Library:CreateWindow(title)
     
     -- Button
     local function Button(text, callback)
-        local button = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local button = createElement({
             type = "TextButton",
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.new(0.2, 0.2, 0.2),
@@ -264,7 +280,6 @@ function Library:CreateWindow(title)
         
         button.MouseButton1Click:Connect(function()
             callback()
-            -- Press animation
             local pressTween = TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 28)})
             pressTween:Play()
             pressTween.Completed:Connect(function()
@@ -279,13 +294,13 @@ function Library:CreateWindow(title)
             TweenService:Create(button, createTweenInfo(), {BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)}):Play()
         end)
         
-        currentSection = nil -- Reset after element
+        currentSection = nil
         return button
     end
     
     -- Toggle
     local function Toggle(text, default, callback)
-        local toggleFrame = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local toggleFrame = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
@@ -297,7 +312,6 @@ function Library:CreateWindow(title)
         
         local toggleLabel = Instance.new("TextLabel")
         toggleLabel.Size = UDim2.new(1, -50, 1, 0)
-        toggleLabel.Position = UDim2.new(0, 0, 0, 0)
         toggleLabel.BackgroundTransparency = 1
         toggleLabel.Text = text
         toggleLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -345,10 +359,10 @@ function Library:CreateWindow(title)
         return toggleFrame, updateToggle
     end
     
-    -- Slider
+    -- Slider (unchanged, but parenting handled automatically)
     local function Slider(text, min, max, default, callback, format)
         format = format or "%.2f"
-        local sliderFrame = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local sliderFrame = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 50),
             BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
@@ -399,23 +413,26 @@ function Library:CreateWindow(title)
             callback(value)
         end
         
+        local dragConnection
         sliderBar.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = true
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local mouse = UserInputService:GetMouseLocation()
-                local relativeX = math.clamp((mouse.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-                updateSlider(min + relativeX * (max - min))
+                dragConnection = UserInputService.InputChanged:Connect(function(input2)
+                    if dragging and input2.UserInputType == Enum.UserInputType.MouseMovement then
+                        local mouse = UserInputService:GetMouseLocation()
+                        local relativeX = math.clamp((mouse.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+                        updateSlider(min + relativeX * (max - min))
+                    end
+                end)
             end
         end)
         
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = false
+                if dragConnection then
+                    dragConnection:Disconnect()
+                end
             end
         end)
         
@@ -424,9 +441,9 @@ function Library:CreateWindow(title)
         return sliderFrame, updateSlider
     end
     
-    -- Dropdown
+    -- Dropdown (unchanged)
     local function Dropdown(text, options, default, callback)
-        local dropdownFrame = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local dropdownFrame = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
@@ -438,7 +455,6 @@ function Library:CreateWindow(title)
         
         local dropdownLabel = Instance.new("TextLabel")
         dropdownLabel.Size = UDim2.new(1, -30, 1, 0)
-        dropdownLabel.Position = UDim2.new(0, 0, 0, 0)
         dropdownLabel.BackgroundTransparency = 1
         dropdownLabel.Text = text .. ": " .. (default or options[1] or "None")
         dropdownLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -484,19 +500,16 @@ function Library:CreateWindow(title)
             open = not open
             dropdownList.Visible = open
             if open then
-                local height = #options * 25
-                dropdownList.Size = UDim2.new(1, 0, 0, 0)
+                local height = math.min(#options * 25, 150) -- Limit height
                 TweenService:Create(dropdownList, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 0, height)}):Play()
             else
                 TweenService:Create(dropdownList, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                wait(0.2)
-                dropdownList.Visible = false
             end
         end
         
         dropdownButton.MouseButton1Click:Connect(toggleList)
         
-        for i, option in ipairs(options) do
+        for _, option in ipairs(options) do
             local optionButton = Instance.new("TextButton")
             optionButton.Size = UDim2.new(1, 0, 0, 25)
             optionButton.BackgroundTransparency = 1
@@ -521,17 +534,17 @@ function Library:CreateWindow(title)
             end)
         end
         
-        dropdownList:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            dropdownFrame.Size = UDim2.new(1, 0, 0, open and dropdownList.AbsoluteSize.Y + 30 or 30)
-        end)
-        
         currentSection = nil
-        return dropdownFrame, function(newValue) selected = newValue; dropdownLabel.Text = text .. ": " .. selected; callback(selected) end
+        return dropdownFrame, function(newValue)
+            selected = newValue
+            dropdownLabel.Text = text .. ": " .. selected
+            callback(selected)
+        end
     end
     
-    -- MultiDropdown
+    -- MultiDropdown (similar updates for height limit)
     local function MultiDropdown(text, options, defaults, callback)
-        local multiFrame = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local multiFrame = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
@@ -588,19 +601,16 @@ function Library:CreateWindow(title)
             open = not open
             multiList.Visible = open
             if open then
-                local height = #options * 25
-                multiList.Size = UDim2.new(1, 0, 0, 0)
+                local height = math.min(#options * 25, 150)
                 TweenService:Create(multiList, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 0, height)}):Play()
             else
                 TweenService:Create(multiList, createTweenInfo(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                wait(0.2)
-                multiList.Visible = false
             end
         end
         
         multiButton.MouseButton1Click:Connect(toggleList)
         
-        for i, option in ipairs(options) do
+        for _, option in ipairs(options) do
             local optionFrame = Instance.new("Frame")
             optionFrame.Size = UDim2.new(1, 0, 0, 25)
             optionFrame.BackgroundTransparency = 1
@@ -642,17 +652,16 @@ function Library:CreateWindow(title)
             end)
         end
         
-        multiList:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            multiFrame.Size = UDim2.new(1, 0, 0, open and multiList.AbsoluteSize.Y + 30 or 30)
-        end)
-        
         currentSection = nil
-        return multiFrame, function(newSelected) selected = newSelected; callback(selected) end
+        return multiFrame, function(newSelected)
+            selected = newSelected
+            callback(selected)
+        end
     end
     
     -- TextInput
     local function TextInput(text, default, callback)
-        local inputFrame = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local inputFrame = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
@@ -703,12 +712,15 @@ function Library:CreateWindow(title)
         end)
         
         currentSection = nil
-        return inputFrame, function(newText) inputBox.Text = newText; callback(newText) end
+        return inputFrame, function(newText)
+            inputBox.Text = newText
+            callback(newText)
+        end
     end
     
     -- Divider
     local function Divider()
-        local div = createElement(currentSection or (currentTab and currentTab.content) or ContentContainer, {
+        local div = createElement({
             type = "Frame",
             Size = UDim2.new(1, 0, 0, 1),
             BackgroundColor3 = Color3.new(0.2, 0.2, 0.2),
@@ -718,7 +730,102 @@ function Library:CreateWindow(title)
         return div
     end
     
-    -- Expose elements to Window for backward compat
+    -- Keybind
+    local function Keybind(text, defaultKey, callback)
+        local keybindFrame = createElement({
+            type = "Frame",
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
+            BorderSizePixel = 0
+        })
+        local keybindCorner = Instance.new("UICorner")
+        keybindCorner.CornerRadius = UDim.new(0, 4)
+        keybindCorner.Parent = keybindFrame
+        
+        local keybindLabel = Instance.new("TextLabel")
+        keybindLabel.Size = UDim2.new(1, -60, 1, 0)
+        keybindLabel.BackgroundTransparency = 1
+        keybindLabel.Text = text .. ": "
+        keybindLabel.TextColor3 = Color3.new(1, 1, 1)
+        keybindLabel.TextScaled = true
+        keybindLabel.Font = Enum.Font.SourceSans
+        keybindLabel.TextXAlignment = Enum.TextXAlignment.Left
+        keybindLabel.Parent = keybindFrame
+        
+        local keyButton = Instance.new("TextButton")
+        keyButton.Size = UDim2.new(0, 50, 0, 25)
+        keyButton.Position = UDim2.new(1, -55, 0.5, -12.5)
+        keyButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+        keyButton.BorderSizePixel = 0
+        keyButton.Text = defaultKey.Name
+        keyButton.TextColor3 = Color3.new(1, 1, 1)
+        keyButton.TextScaled = true
+        keyButton.Font = Enum.Font.SourceSansBold
+        keyButton.Parent = keybindFrame
+        
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 4)
+        buttonCorner.Parent = keyButton
+        
+        local currentKey = defaultKey
+        local listening = false
+        
+        keyButton.MouseButton1Click:Connect(function()
+            if listening then return end
+            listening = true
+            keyButton.Text = "..."
+            TweenService:Create(keyButton, createTweenInfo(), {BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)}):Play()
+            
+            local listenConnection
+            listenConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                if gameProcessed or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+                currentKey = input.KeyCode
+                keyButton.Text = currentKey.Name
+                TweenService:Create(keyButton, createTweenInfo(), {BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)}):Play()
+                listening = false
+                listenConnection:Disconnect()
+                -- Update keybinds table
+                for i, kb in ipairs(keybinds) do
+                    if kb.frame == keybindFrame then
+                        kb.key = currentKey
+                        break
+                    end
+                end
+            end)
+        end)
+        
+        keyButton.MouseEnter:Connect(function()
+            if not listening then
+                TweenService:Create(keyButton, createTweenInfo(), {BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)}):Play()
+            end
+        end)
+        keyButton.MouseLeave:Connect(function()
+            if not listening then
+                TweenService:Create(keyButton, createTweenInfo(), {BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)}):Play()
+            end
+        end)
+        
+        table.insert(keybinds, {key = currentKey, callback = callback, frame = keybindFrame})
+        
+        currentSection = nil
+        return keybindFrame, function(newKey)
+            currentKey = newKey
+            keyButton.Text = newKey.Name
+            for i, kb in ipairs(keybinds) do
+                if kb.frame == keybindFrame then
+                    kb.key = newKey
+                    break
+                end
+            end
+        end
+    end
+    
+    local Window = { 
+        CreateTab = CreateTab,
+        ScreenGui = ScreenGui
+    }
+    
+    -- Expose methods to Window
     Window.Section = Section
     Window.Button = Button
     Window.Toggle = Toggle
@@ -727,6 +834,7 @@ function Library:CreateWindow(title)
     Window.MultiDropdown = MultiDropdown
     Window.TextInput = TextInput
     Window.Divider = Divider
+    Window.Keybind = Keybind
     
     return Window
 end
