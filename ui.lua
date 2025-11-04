@@ -749,6 +749,23 @@ function UI:CreateWindow(title, size, position)
    
     local contentContainer = createFrame(mainFrame, UDim2.new(1, 0, 1, -70), UDim2.new(0, 0, 0, 70))
    
+    local notificationsContainer = Instance.new("Frame")
+    notificationsContainer.Name = "Notifications"
+    notificationsContainer.Size = UDim2.new(0, 0, 0, 0)
+    notificationsContainer.Position = UDim2.new(1, -300, 1, -10)
+    notificationsContainer.AnchorPoint = Vector2.new(1, 1)
+    notificationsContainer.BackgroundTransparency = 1
+    notificationsContainer.Parent = screenGui
+   
+    local notifListLayout = Instance.new("UIListLayout")
+    notifListLayout.Padding = UDim.new(0, 5)
+    notifListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    notifListLayout.Parent = notificationsContainer
+   
+    notifListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        notificationsContainer.Size = UDim2.new(0, 290, 0, notifListLayout.AbsoluteContentSize.Y + 10)
+    end)
+   
     local tabs = {}
     local currentTab = nil
     local hasSettings = false
@@ -762,6 +779,45 @@ function UI:CreateWindow(title, size, position)
         keybinds = {},
         textboxes = {},
         configs = {},
+        Notify = function(self, title, description, duration)
+            duration = duration or 5
+            local notif = createFrame(notificationsContainer, UDim2.new(1, 0, 0, 50))
+            local titleLabel = createLabel(notif, title, UDim2.new(1, 0, 0, 20), UDim2.new(0, 5, 0, 5))
+            titleLabel.TextScaled = false
+            titleLabel.TextSize = 14
+            titleLabel.Font = Enum.Font.GothamBold
+            titleLabel.TextYAlignment = Enum.TextYAlignment.Top
+            local descLabel = createLabel(notif, description, UDim2.new(1, -10, 0, 20), UDim2.new(0, 5, 0, 25))
+            descLabel.TextScaled = false
+            descLabel.TextSize = 12
+            descLabel.Font = Enum.Font.Gotham
+            descLabel.TextXAlignment = Enum.TextXAlignment.Left
+            descLabel.TextYAlignment = Enum.TextYAlignment.Top
+            descLabel.TextWrapped = true
+            local progressBar = createFrame(notif, UDim2.new(1, -10, 0, 4), UDim2.new(0, 5, 1, -9))
+            progressBar:SetAttribute("bgType", "toggleOff")
+            local progressFill = createFrame(progressBar, UDim2.new(0, 0, 1, 0))
+            progressFill:SetAttribute("bgType", "toggleOn")
+            local progressCorner = Instance.new("UICorner")
+            progressCorner.CornerRadius = UDim.new(1, 0)
+            progressCorner.Parent = progressBar
+            local fillCorner = progressCorner:Clone()
+            fillCorner.Parent = progressFill
+            local startPos = notif.Position
+            notif.Position = UDim2.new(1, 0, startPos.Y.Scale, startPos.Y.Offset)
+            local slideIn = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = startPos})
+            slideIn:Play()
+            local progressTween = TweenService:Create(progressFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 1, 0)})
+            progressTween:Play()
+            spawn(function()
+                wait(duration)
+                local slideOut = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, startPos.Y.Scale, startPos.Y.Offset)})
+                slideOut:Play()
+                slideOut.Completed:Connect(function()
+                    notif:Destroy()
+                end)
+            end)
+        end,
         AddTab = function(name)
             if name == "Settings" then return end
             local tab = Tab.new(contentContainer, name, false, window)
