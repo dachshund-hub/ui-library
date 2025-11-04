@@ -1,4 +1,3 @@
-
 local Library = {Toggle = true, FirstTab = nil, TabCount = 0, ColorTable = {}, CurrentTab = nil, tick = tick(), Connections = {}, flags = {}}
 local cloneref = cloneref or function(v) return v; end
 local function getservice(v) return cloneref(game:GetService(v)); end
@@ -11,12 +10,11 @@ local HttpService = getservice("HttpService")
 local TextService = getservice("TextService")
 local RunService = getservice("RunService")
 local Players = getservice("Players")
-local IsMobile = UserInputService.TouchEnabled 
+local IsMobile = UserInputService.TouchEnabled
 shared.Dachshund = shared.Dachshund or {}
 shared.Dachshund.flags = shared.Dachshund.flags or {}
 shared.Dachshund.Elements = shared.Dachshund.Elements or {}
 shared.Dachshund.ElementCounter = 0
-
 local function requesturl(i, v)
 if RunService:IsStudio() then
 return nil
@@ -317,10 +315,9 @@ ReopenButton.Visible = true
 end)
 return ReopenButton
 end
-function Library:CreateWindow(Config: {WindowName: string, Color: Color3, MinHeight: number?, MaxHeight: number?, InitialHeight: number?}, Parent: Instance): Window
+function Library:CreateWindow(Parent: Instance): Window
 local WindowInit: Window = {}
-if Config == nil then
-Config = {
+local Config = {
 WindowName = "Dachshund hub",
 Color = Color3.fromRGB(0, 162, 255),
 Keybind = Enum.KeyCode.RightShift,
@@ -332,20 +329,6 @@ MaxWidth = 800,
 InitialWidth = 500,
 Assets = false
 }
-else
-if Config.Assets == nil then
-Config.Assets = false
-end
-Config.Keybind = Config.Keybind or Enum.KeyCode.RightShift
-Config.WindowName = "Dachshund hub"
-Config.Color = Config.Color or Color3.fromRGB(0, 162, 255)
-Config.MinHeight = Config.MinHeight or 100
-Config.MaxHeight = Config.MaxHeight or 600
-Config.InitialHeight = Config.InitialHeight or 400
-Config.MinWidth = Config.MinWidth or 300
-Config.MaxWidth = Config.MaxWidth or 800
-Config.InitialWidth = Config.InitialWidth or 500
-end
 if Config.Assets then
 shared.Dachshund.DachshundLoadAssets = true
 end
@@ -416,7 +399,6 @@ end))
 table.insert(Library.Connections, SearchBar.FocusLost:Connect(function()
 TweenService:Create(SearchBar, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(25, 25, 25)}):Play()
 end))
---makedraggable(Topbar, Main)
 makedraggable(Main, Main)
 local Close = Topbar.Close
 if IsMobile then
@@ -1855,6 +1837,7 @@ end
 end
 end
 end
+end
 end))
 table.insert(Library.Connections, UserInputService.InputEnded:Connect(function(Input)
 if KeybindMode == "Hold" then
@@ -2612,7 +2595,6 @@ DropdownInit.UniqueID = UniqueID
 shared.Dachshund.Elements[UniqueID] = DropdownInit
 return DropdownInit
 end
--- its so skidded i just gived up
 function SectionInit:CreateColorpicker(Name: string, Callback: (Color: Color3, Transparency: number?) -> (), IsAccentColorpicker: boolean?, WrapText: boolean?, AttachToToggle: Element?): Element
 local ColorpickerInit: Element = {}
 shared.Dachshund.ElementCounter += 1
@@ -3451,7 +3433,7 @@ end))
 function Library:GetTextBounds(Text, Font, Size, Resolution)
 local Bounds = TextService:GetTextSize(Text, Size, Font, Resolution or Vector2.new(1920, 1080))
 return Bounds.X, Bounds.Y
-end -- credits linoria library
+end
 function Library:Hud()
 local HudInit = {}
 local Hud = Folder.Hud:Clone()
@@ -3467,7 +3449,6 @@ Hud.AnchorPoint = Vector2.new(1, 0)
 Hud.Position = UDim2.new(1, -padding.right, 0, padding.top)
 Hud.Visible = true
 table.insert(Library.ColorTable, Hud.BorderFrame1.BorderFrame2.BorderFrame3.InnerFrame.GradientFrame)
--- Make Hud draggable by default
 makedraggable(Hud, Hud)
 local function updateSize()
 local text = InfoText.Text
@@ -3619,7 +3600,6 @@ self.particles = {}
 end
 end
 end
--- skidded CreateKeybindViewer and CreateToggleList
 function Library:CreateKeybindViewer(Config)
 local KeybindViewerInit = {}
 Config = Config or {}
@@ -3938,7 +3918,7 @@ end
 KeybindViewer.Parent = Screen
 table.insert(Library.ColorTable, KeybindViewer.BorderFrame1.BorderFrame2.BorderFrame3.InnerFrame.GradientFrame)
 StartUpdating()
-task.wait(.1) -- some times i dream of saving the world
+task.wait(.1)
 UpdateKeybindEntries()
 return KeybindViewerInit
 end
@@ -4233,11 +4213,10 @@ end
 ToggleList.Parent = Screen
 table.insert(Library.ColorTable, ToggleList.BorderFrame1.BorderFrame2.BorderFrame3.InnerFrame.GradientFrame)
 StartUpdating()
-task.wait(.1) -- some times i dream of saving the world
+task.wait(.1)
 UpdateToggleEntries()
 return ToggleListInit
 end
---pasted from a old source
 function WindowInit:CreateGlow(enableGlow, glowConfig)
 glowConfig = glowConfig or {}
 if enableGlow then
@@ -4346,7 +4325,6 @@ local vvvvvv = 0
 for _ in next, shared.Dachshund.Elements do
 vvvvvv += 1
 end
---print("Destroyed " .. vvvvvv .. " elements")
 shared.Dachshund.Elements = {}
 end
 if Library.Connections then
@@ -4358,7 +4336,6 @@ Library.Connections[i] = nil
 vvvvvxx += 1
 end
 end
---print("Disconnected " .. vvvvvxx .. " connections")
 Library.Connections = {}
 end
 if Library.flags or shared.Dachshund.flags then
@@ -4384,7 +4361,6 @@ end
 end
 didcone(Library.flags)
 didcone(shared.Dachshund.flags)
--- print("Disconnected " .. flagsdd .. " flag connections")
 end
 Library.ColorTable = {}
 if shared.Dachshund then
@@ -4396,7 +4372,6 @@ end
 Library.tick = nil
 Library.flags = nil
 shared.Dachshund.flags = nil
---print("Library destroyed")
 end
 return WindowInit
 end
