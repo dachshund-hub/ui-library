@@ -1,48 +1,64 @@
 -- UI Library
-local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
+local UILib = {}
+UILib.__index = UILib
+
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
-local UIDebugMode = false -- user sets this before calling library
+function UILib:CreateWindow(props)
+    local Window = Instance.new("Frame")
+    Window.Name = "DachshundWindow"
+    Window.Size = props.Size or UDim2.new(0,600,0,400)
+    Window.BackgroundColor3 = props.BackgroundColor or Color3.fromRGB(0,0,0)
+    Window.BorderColor3 = props.OutlineColor or Color3.fromRGB(0, 102, 255)
+    Window.BorderSizePixel = 2
+    Window.AnchorPoint = Vector2.new(0.5,0.5)
+    Window.Position = UDim2.new(0.5,0,0.5,0)
+    Window.Parent = props.Parent or game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local UILib = {}
-UILib.Windows = {}
+    Window.ClipsDescendants = true
+    Window.RoundedCorner = Instance.new("UICorner", Window)
+    Window.RoundedCorner.CornerRadius = UDim.new(0,8)
 
-local function debugPrint(...)
-    if UIDebugMode then
-        print("[UI DEBUG]:", ...)
-    end
-end
+    local TabsFrame = Instance.new("Frame", Window)
+    TabsFrame.Size = UDim2.new(0,120,1,0)
+    TabsFrame.Position = UDim2.new(1,-120,0,0)
+    TabsFrame.BackgroundTransparency = 1
+    local TabsLayout = Instance.new("UIListLayout", TabsFrame)
+    TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabsLayout.Padding = UDim.new(0,4)
 
-local function create(instance, props)
-    local obj = Instance.new(instance)
-    for k,v in pairs(props or {}) do
-        obj[k] = v
-    end
-    return obj
-end
+    local Divider = Instance.new("Frame", Window)
+    Divider.Size = UDim2.new(0,2,1,0)
+    Divider.Position = UDim2.new(1,-122,0,0)
+    Divider.BackgroundColor3 = Color3.fromRGB(0,102,255)
 
-local function createTween(obj, props, duration, style, dir)
-    style = style or Enum.EasingStyle.Quad
-    dir = dir or Enum.EasingDirection.Out
-    local tween = TweenService:Create(obj, TweenInfo.new(duration or 0.3, style, dir), props)
-    tween:Play()
-    return tween
-end
+    local ContentFrame = Instance.new("ScrollingFrame", Window)
+    ContentFrame.Size = UDim2.new(1,-124,1,0)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.CanvasSize = UDim2.new(0,0,0,0)
+    local ContentLayout = Instance.new("UIListLayout", ContentFrame)
+    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ContentLayout.Padding = UDim.new(0,6)
 
-local function dragify(frame)
-    local dragging, dragInput, dragStart, startPos
+    local WindowObj = {Window=Window, Tabs=TabsFrame, Content=ContentFrame, TabObjects={}}
+    setmetatable(WindowObj, UILib)
+
+    local dragging = false
+    local dragInput, mousePos, framePos
+
     local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        local delta = input.Position - mousePos
+        Window.Position = UDim2.new(0, framePos.X + delta.X, 0, framePos.Y + delta.Y)
     end
-    frame.InputBegan:Connect(function(input)
+
+    Window.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
+            mousePos = input.Position
+            framePos = Vector2.new(Window.Position.X.Offset, Window.Position.Y.Offset)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -50,203 +66,161 @@ local function dragify(frame)
             end)
         end
     end)
-    frame.InputChanged:Connect(function(input)
+
+    Window.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             dragInput = input
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging and dragInput then
+            update(dragInput)
+        end
+    end)
+
+    return WindowObj
+end
+
+function UILib:AddTab(name)
+    local Button = Instance.new("TextButton", self.Tabs)
+    Button.Text = name
+    Button.Size = UDim2.new(1,0,0,40)
+    Button.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    Button.TextColor3 = Color3.fromRGB(255,255,255)
+    local corner = Instance.new("UICorner", Button)
+    corner.CornerRadius = UDim.new(0,4)
+    local TabContent = Instance.new("Frame", self.Window)
+    TabContent.Size = self.Content.Size
+    TabContent.Position = self.Content.Position
+    TabContent.BackgroundTransparency = 1
+    TabContent.Visible = false
+    self.TabObjects[name] = TabContent
+
+    Button.MouseButton1Click:Connect(function()
+        for _,v in pairs(self.TabObjects) do v.Visible = false end
+        TabContent.Visible = true
+    end)
+
+    return TabContent
+end
+
+function UILib:Toggle(props)
+    local T = Instance.new("TextButton", props.Parent)
+    T.Size = UDim2.new(1,0,0,30)
+    T.Text = props.Text
+    T.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    T.TextColor3 = Color3.fromRGB(255,255,255)
+    local corner = Instance.new("UICorner", T)
+    corner.CornerRadius = UDim.new(0,4)
+    local state = false
+    T.MouseButton1Click:Connect(function()
+        state = not state
+        T.BackgroundColor3 = state and Color3.fromRGB(0,102,255) or Color3.fromRGB(35,35,35)
+        if props.Callback then props.Callback(state) end
+    end)
+end
+
+function UILib:Slider(props)
+    local F = Instance.new("Frame", props.Parent)
+    F.Size = UDim2.new(1,0,0,30)
+    F.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    local corner = Instance.new("UICorner", F)
+    corner.CornerRadius = UDim.new(0,4)
+    local SliderBar = Instance.new("Frame", F)
+    SliderBar.Size = UDim2.new(0,0,1,0)
+    SliderBar.BackgroundColor3 = Color3.fromRGB(0,102,255)
+    local dragging = false
+    F.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    F.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    F.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            local pos = math.clamp(input.Position.X - F.AbsolutePosition.X,0,F.AbsoluteSize.X)
+            SliderBar.Size = UDim2.new(0,pos,1,0)
+            if props.Callback then
+                local val = (pos/F.AbsoluteSize.X)*(props.Max-props.Min)+props.Min
+                props.Callback(val)
+            end
         end
     end)
 end
 
-function UILib:CreateWindow(options)
-    options = options or {}
-    local title = options.Title or "Dachshund Hub"
-    local bgColor = options.BackgroundColor or Color3.fromRGB(0,0,0)
-    local outlineColor = options.OutlineColor or Color3.fromRGB(0,162,255)
-    local textColor = options.TextColor or Color3.fromRGB(255,255,255)
-    local size = options.Size or UDim2.new(0, 500, 0, 350)
+function UILib:Button(props)
+    local B = Instance.new("TextButton", props.Parent)
+    B.Size = UDim2.new(1,0,0,30)
+    B.Text = props.Text
+    B.BackgroundColor3 = Color3.fromRGB(0,102,255)
+    B.TextColor3 = Color3.fromRGB(255,255,255)
+    local corner = Instance.new("UICorner", B)
+    corner.CornerRadius = UDim.new(0,4)
+    B.MouseButton1Click:Connect(function()
+        if props.Callback then props.Callback() end
+    end)
+end
 
-    local screenGui = create("ScreenGui",{Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"), ResetOnSpawn = false})
-    local window = create("Frame",{
-        Parent = screenGui,
-        BackgroundColor3 = bgColor,
-        BorderColor3 = outlineColor,
-        BorderSizePixel = 2,
-        Size = size,
-        Position = UDim2.new(0.5, -size.X.Offset/2, 0.5, -size.Y.Offset/2),
-        ClipsDescendants = true
-    })
-    window.Name = "DachshundHubWindow"
-    window.AnchorPoint = Vector2.new(0.5,0.5)
-    window.Visible = true
-    window.AutoButtonColor = false
-    dragify(window)
-
-    local titleLabel = create("TextLabel",{
-        Parent = window,
-        Text = title,
-        Size = UDim2.new(1,0,0,30),
-        BackgroundTransparency = 1,
-        TextColor3 = textColor,
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 20
-    })
-
-    local tabsFrame = create("Frame",{
-        Parent = window,
-        BackgroundColor3 = bgColor,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,120,1,-30),
-        Position = UDim2.new(0,0,0,30)
-    })
-
-    local divider = create("Frame",{
-        Parent = window,
-        BackgroundColor3 = outlineColor,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,2,1,-30),
-        Position = UDim2.new(0,120,0,30)
-    })
-
-    local contentFrame = create("Frame",{
-        Parent = window,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, -122, 1, -30),
-        Position = UDim2.new(0,122,0,30)
-    })
-
-    local windowTable = {
-        ScreenGui = screenGui,
-        Window = window,
-        TabsFrame = tabsFrame,
-        Divider = divider,
-        ContentFrame = contentFrame,
-        Tabs = {}
-    }
-
-    function windowTable:AddTab(name)
-        local button = create("TextButton",{
-            Parent = self.TabsFrame,
-            Text = name,
-            Size = UDim2.new(1,0,0,30),
-            BackgroundTransparency = 1,
-            TextColor3 = textColor,
-            Font = Enum.Font.SourceSansBold,
-            TextSize = 16
-        })
-        local tabFrame = create("Frame",{
-            Parent = self.ContentFrame,
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1,0,1,0),
-            Visible = false
-        })
-        button.MouseButton1Click:Connect(function()
-            for _,v in pairs(self.Tabs) do
-                v.Frame.Visible = false
-            end
-            tabFrame.Visible = true
-        end)
-        table.insert(self.Tabs,{Button = button, Frame = tabFrame})
-        return tabFrame
-    end
-
-    function windowTable:Toggle(options)
-        options = options or {}
-        local name = options.Text or "Toggle"
-        local callback = options.Callback or function() end
-        local toggleFrame = create("Frame",{Parent = options.Parent or self.ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1,0,0,30)})
-        local toggleButton = create("TextButton",{Parent = toggleFrame, Text = "[ ] "..name, Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16})
-        local toggled = false
-        toggleButton.MouseButton1Click:Connect(function()
-            toggled = not toggled
-            toggleButton.Text = (toggled and "[X] " or "[ ] ")..name
-            pcall(callback,toggled)
-        end)
-    end
-
-    function windowTable:Slider(options)
-        options = options or {}
-        local sliderFrame = create("Frame",{Parent = options.Parent or self.ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1,0,0,40)})
-        local sliderLabel = create("TextLabel",{Parent = sliderFrame, Text = options.Text or "Slider", Size = UDim2.new(1,0,0,20), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16})
-        local sliderBar = create("Frame",{Parent = sliderFrame, BackgroundColor3 = outlineColor, Size = UDim2.new(1,0,0,4), Position = UDim2.new(0,0,0,25)})
-        local sliderFill = create("Frame",{Parent = sliderBar, BackgroundColor3 = textColor, Size = UDim2.new(0,0,1,0)})
-        local min = options.Min or 0
-        local max = options.Max or 100
-        local callback = options.Callback or function() end
-        sliderBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local function updateSlider(x)
-                    local relativeX = math.clamp(x - sliderBar.AbsolutePosition.X,0,sliderBar.AbsoluteSize.X)
-                    local value = min + (max-min)*(relativeX/sliderBar.AbsoluteSize.X)
-                    sliderFill.Size = UDim2.new(relativeX/sliderBar.AbsoluteSize.X,0,1,0)
-                    pcall(callback,value)
-                end
-                updateSlider(UserInputService:GetMouseLocation().X)
-                local conn
-                conn = UserInputService.InputChanged:Connect(function(input2)
-                    if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                        updateSlider(input2.Position.X)
-                    end
-                end)
-                local upConn
-                upConn = UserInputService.InputEnded:Connect(function(input2)
-                    if input2.UserInputType == Enum.UserInputType.MouseButton1 then
-                        conn:Disconnect()
-                        upConn:Disconnect()
-                    end
-                end)
-            end
-        end)
-    end
-
-    function windowTable:Button(options)
-        options = options or {}
-        local buttonFrame = create("Frame",{Parent = options.Parent or self.ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1,0,0,30)})
-        local button = create("TextButton",{Parent = buttonFrame, Text = options.Text or "Button", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16})
-        button.MouseButton1Click:Connect(function()
-            pcall(options.Callback)
-        end)
-    end
-
-    function windowTable:TextInput(options)
-        options = options or {}
-        local inputFrame = create("Frame",{Parent = options.Parent or self.ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1,0,0,30)})
-        local box = create("TextBox",{Parent = inputFrame, Text = options.Placeholder or "", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16})
-        box.FocusLost:Connect(function(enter)
-            if enter then
-                pcall(options.Callback,box.Text)
-            end
-        end)
-    end
-
-    function windowTable:Divider(text)
-        local div = create("Frame",{Parent = self.ContentFrame, BackgroundColor3 = outlineColor, Size = UDim2.new(1,0,0,2)})
-        if text then
-            local label = create("TextLabel",{Parent = div, Text = text, BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16, Position = UDim2.new(0,5,0,-18)})
+function UILib:TextInput(props)
+    local Box = Instance.new("TextBox", props.Parent)
+    Box.Size = UDim2.new(1,0,0,30)
+    Box.PlaceholderText = props.Placeholder
+    Box.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    Box.TextColor3 = Color3.fromRGB(255,255,255)
+    local corner = Instance.new("UICorner", Box)
+    corner.CornerRadius = UDim.new(0,4)
+    Box.FocusLost:Connect(function(enterPressed)
+        if enterPressed and props.Callback then
+            props.Callback(Box.Text)
         end
-    end
+    end)
+end
 
-    function windowTable:Notify(title,message,duration)
-        duration = duration or 3
-        local notifGui = create("ScreenGui",{Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"), ResetOnSpawn = false})
-        local frame = create("Frame",{Parent = notifGui, BackgroundColor3 = bgColor, BorderColor3 = outlineColor, BorderSizePixel = 2, Size = UDim2.new(0,250,0,100), Position = UDim2.new(0.5,-125,0,50)})
-        local titleLabel = create("TextLabel",{Parent = frame, Text = title or "Notification", Size = UDim2.new(1,0,0,30), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSansBold, TextSize = 18})
-        local msgLabel = create("TextLabel",{Parent = frame, Text = message or "", Size = UDim2.new(1,0,0,70), Position = UDim2.new(0,0,0,30), BackgroundTransparency = 1, TextColor3 = textColor, Font = Enum.Font.SourceSans, TextSize = 16, TextWrapped = true})
-        spawn(function()
-            wait(duration)
-            frame:Destroy()
-            notifGui:Destroy()
+function UILib:Divider(text)
+    local F = Instance.new("Frame", self.Content)
+    F.Size = UDim2.new(1,0,0,1)
+    F.BackgroundColor3 = Color3.fromRGB(0,102,255)
+    if text then
+        local L = Instance.new("TextLabel", self.Content)
+        L.Size = UDim2.new(1,0,0,20)
+        L.Text = text
+        L.TextColor3 = Color3.fromRGB(255,255,255)
+        L.BackgroundTransparency = 1
+    end
+end
+
+function UILib:Notify(title,msg,duration)
+    duration = duration or 2
+    local Gui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
+    local Frame = Instance.new("Frame", Gui)
+    Frame.Size = UDim2.new(0,250,0,80)
+    Frame.Position = UDim2.new(1,-260,0,50)
+    Frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    local corner = Instance.new("UICorner", Frame)
+    corner.CornerRadius = UDim.new(0,6)
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Text = title
+    Title.Size = UDim2.new(1,0,0,30)
+    Title.TextColor3 = Color3.fromRGB(0,102,255)
+    Title.BackgroundTransparency = 1
+    local Msg = Instance.new("TextLabel", Frame)
+    Msg.Text = msg
+    Msg.Size = UDim2.new(1,0,1,-30)
+    Msg.Position = UDim2.new(0,0,0,30)
+    Msg.TextColor3 = Color3.fromRGB(255,255,255)
+    Msg.BackgroundTransparency = 1
+    Frame:TweenPosition(UDim2.new(1,-260,0,100), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true, function()
+        delay(duration,function()
+            Frame:TweenPosition(UDim2.new(1,0,0,100), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.5, true, function()
+                Gui:Destroy()
+            end)
         end)
-    end
-
-    table.insert(UILib.Windows,windowTable)
-    debugPrint("Window created:",title)
-    return windowTable
+    end)
 end
 
 return UILib
