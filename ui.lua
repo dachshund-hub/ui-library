@@ -2,7 +2,6 @@ local UI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
-
 local colors = {
     background = Color3.fromRGB(0, 0, 0),
     outline = Color3.fromRGB(0, 162, 255),
@@ -12,7 +11,6 @@ local colors = {
     toggleOff = Color3.fromRGB(50, 50, 50),
     placeholder = Color3.fromRGB(100, 100, 100)
 }
-
 local function copyTable(t)
     local nt = {}
     for k, v in pairs(t) do
@@ -20,7 +18,6 @@ local function copyTable(t)
     end
     return nt
 end
-
 local function ApplyTheme(obj, colors)
     if not obj or not obj:IsA("GuiObject") then return end
     local bgType = obj:GetAttribute("bgType")
@@ -40,7 +37,6 @@ local function ApplyTheme(obj, colors)
         ApplyTheme(child, colors)
     end
 end
-
 local function animateIn(elem)
     elem.Position = UDim2.new(0.5, 0, 0.5, 0)
     elem.Size = UDim2.new(0, 0, 0, 0)
@@ -64,23 +60,19 @@ local function animateIn(elem)
         end
     end
 end
-
 local function makeDraggable(frame)
     local dragging = false
     local dragStart = nil
     local startPos = nil
-
     local function update(input)
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-
     frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
-
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -88,14 +80,12 @@ local function makeDraggable(frame)
             end)
         end
     end)
-
     frame.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
             update(input)
         end
     end)
 end
-
 local function createFrame(parent, size, position, name)
     local frame = Instance.new("Frame")
     frame.Name = name or "Frame"
@@ -105,19 +95,18 @@ local function createFrame(parent, size, position, name)
     frame.BorderSizePixel = 0
     frame.Parent = parent
     frame:SetAttribute("bgType", "background")
-    
+   
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = frame
-    
+   
     local stroke = Instance.new("UIStroke")
     stroke.Color = colors.outline
     stroke.Thickness = 1
     stroke.Parent = frame
-    
+   
     return frame
 end
-
 local function createLabel(parent, text, size, position)
     local label = Instance.new("TextLabel")
     label.Size = size or UDim2.new(1, 0, 1, 0)
@@ -131,7 +120,6 @@ local function createLabel(parent, text, size, position)
     label.Parent = parent
     return label
 end
-
 local function createButton(parent, text, callback)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(1, 0, 0, 30)
@@ -144,32 +132,32 @@ local function createButton(parent, text, callback)
     button.Font = Enum.Font.Gotham
     button.Parent = parent
     button:SetAttribute("bgType", "accent")
-    
+   
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = button
-    
+   
     local stroke = Instance.new("UIStroke")
     stroke.Color = colors.outline
     stroke.Thickness = 1
     stroke.Parent = button
-    
+   
     local label = createLabel(button, text)
     label.Size = UDim2.new(1, -10, 1, 0)
     label.Position = UDim2.new(0, 5, 0, 0)
-    
+   
     local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local hoverTween = TweenService:Create(button, tweenInfo, {BackgroundColor3 = colors.outline})
     local normalTween = TweenService:Create(button, tweenInfo, {BackgroundColor3 = colors.accent})
-    
+   
     button.MouseEnter:Connect(function()
         hoverTween:Play()
     end)
-    
+   
     button.MouseLeave:Connect(function()
         normalTween:Play()
     end)
-    
+   
     button.Activated:Connect(function()
         callback()
         local clickTween = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {Size = UDim2.new(0.98, 0, 0.95, 0)})
@@ -178,32 +166,32 @@ local function createButton(parent, text, callback)
             TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 1, 0)}):Play()
         end)
     end)
-    
+   
     return button
 end
-
 local function createToggle(parent, text, defaultState, callback)
     local container = createFrame(parent, UDim2.new(1, 0, 0, 30))
     local label = createLabel(container, text .. ": ", UDim2.new(0.7, 0, 1, 0))
-    
+   
     local toggle = createFrame(container, UDim2.new(0, 40, 0.6, 0), UDim2.new(1, -50, 0.2, 0))
     toggle:SetAttribute("bgType", "toggleOff")
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(0.5, 0)
     toggleCorner.Parent = toggle
-    
+   
     local toggleStroke = Instance.new("UIStroke")
     toggleStroke.Color = colors.outline
     toggleStroke.Thickness = 1
     toggleStroke.Parent = toggle
-    
+   
     local indicator = createFrame(toggle, UDim2.new(0.48, 0, 0.9, 0), UDim2.new(0.05, 0, 0.05, 0))
     indicator:SetAttribute("bgType", "background")
     local indicatorCorner = Instance.new("UICorner")
     indicatorCorner.CornerRadius = UDim.new(0.5, 0)
     indicatorCorner.Parent = indicator
-    
+   
     local state = defaultState or false
+    indicator.Position = UDim2.new(state and 0.9 or 0, 0, 0.05, 0)
     local function updateState()
         local targetColor = state and colors.toggleOn or colors.toggleOff
         local indColor = state and colors.toggleOn or colors.background
@@ -211,7 +199,7 @@ local function createToggle(parent, text, defaultState, callback)
         TweenService:Create(indicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = indColor}):Play()
         callback(state)
     end
-    
+   
     local dragStart, startPos
     toggle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -219,7 +207,7 @@ local function createToggle(parent, text, defaultState, callback)
             startPos = indicator.Position.X.Scale
         end
     end)
-    
+   
     toggle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then
             local delta = (input.Position.X - dragStart) / toggle.AbsoluteSize.X
@@ -227,52 +215,52 @@ local function createToggle(parent, text, defaultState, callback)
             indicator.Position = UDim2.new(newPos, 0, 0.05, 0)
         end
     end)
-    
+   
     toggle.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            state = not state
+            local finalScale = indicator.Position.X.Scale
+            state = finalScale > 0.45
             local targetPos = state and 0.9 or 0
             TweenService:Create(indicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(targetPos, 0, 0.05, 0)}):Play()
             updateState()
             dragStart = nil
         end
     end)
-    
+   
     updateState()
     return container, {state = state, updateState = updateState}
 end
-
 local function createSlider(parent, text, min, max, defaultValue, callback)
     local container = createFrame(parent, UDim2.new(1, 0, 0, 40))
     local label = createLabel(container, text .. ": " .. defaultValue, UDim2.new(1, 0, 0.4, 0))
-    
+   
     local track = createFrame(container, UDim2.new(1, -20, 0.2, 0), UDim2.new(0, 10, 0.6, 0))
     track:SetAttribute("bgType", "toggleOff")
     track.BackgroundColor3 = colors.toggleOff
-    
+   
     local fill = createFrame(track, UDim2.new((defaultValue - min) / (max - min), 0, 1, 0))
     fill:SetAttribute("bgType", "outline")
     fill.BackgroundColor3 = colors.outline
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(0, 2)
     fillCorner.Parent = fill
-    
+   
     local trackCorner = Instance.new("UICorner")
     trackCorner.CornerRadius = UDim.new(0, 2)
     trackCorner.Parent = track
-    
-    local thumb = createFrame(track, UDim2.new(0, 0, 1, 0), UDim2.new(1, -8, 0, -4))
+   
+    local thumb = createFrame(track, UDim2.new(0, 0, 1, 0), UDim2.new((defaultValue - min) / (max - min), -8, 0, -4))
     thumb.Size = UDim2.new(0, 16, 1, 8)
     thumb:SetAttribute("bgType", "outline")
     thumb.BackgroundColor3 = colors.outline
     local thumbCorner = Instance.new("UICorner")
     thumbCorner.CornerRadius = UDim.new(0, 8)
     thumbCorner.Parent = thumb
-    
+   
     local value = defaultValue or min
     local dragging = false
     local connectionChanged, connectionEnded
-    
+   
     local function updateValue(newValue)
         value = math.clamp(newValue, min, max)
         local percent = (value - min) / (max - min)
@@ -285,7 +273,7 @@ local function createSlider(parent, text, min, max, defaultValue, callback)
         TweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
         callback(value)
     end
-    
+   
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -297,14 +285,14 @@ local function createSlider(parent, text, min, max, defaultValue, callback)
             connectionEnded = UserInputService.InputEnded:Connect(onInputEnded)
         end
     end
-    
+   
     local function onInputChanged(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local percent = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
             updateValue(min + percent * (max - min))
         end
     end
-    
+   
     local function onInputEnded(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
@@ -318,34 +306,33 @@ local function createSlider(parent, text, min, max, defaultValue, callback)
             end
         end
     end
-    
+   
     track.InputBegan:Connect(onInputBegan)
     track.InputChanged:Connect(onInputChanged)
     track.InputEnded:Connect(onInputEnded)
-    
+   
     updateValue(value)
     return container, {value = value, updateValue = updateValue}
 end
-
 local function createDropdown(parent, placeholder, options, callback)
     local container = createFrame(parent, UDim2.new(1, 0, 0, 30))
-    local button = createButton(container, "")
+    local button = createButton(container, placeholder or "Select...")
     button:SetAttribute("bgType", "accent")
-    local label = createLabel(button, placeholder or "Select...", UDim2.new(1, -20, 1, 0), UDim2.new(0, 10, 0, 0))
-    
+   
     local dropdownFrame = createFrame(container, UDim2.new(1, 0, 0, 0), UDim2.new(0, 0, 1, 5))
     dropdownFrame.Visible = false
     dropdownFrame.Size = UDim2.new(1, 0, 0, 0)
-    
+   
     local listLayout = Instance.new("UIListLayout")
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Padding = UDim.new(0, 0)
     listLayout.Parent = dropdownFrame
-    
+   
     local curOptions = options
     local selected = placeholder or ""
     local function setSelected(opt)
         selected = opt
+        local label = button:FindFirstChildOfClass("TextLabel")
         TweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
         label.Text = opt
         TweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
@@ -366,13 +353,13 @@ local function createDropdown(parent, placeholder, options, callback)
         end
         dropdownFrame.Size = UDim2.new(1, 0, 0, math.min(#newOptions * 30, 150))
     end
-    
+   
     for i, option in ipairs(options) do
         local optButton = createButton(dropdownFrame, option, function()
             setSelected(option)
         end)
     end
-    
+   
     local open = false
     local outsideConnection
     button.Activated:Connect(function()
@@ -409,52 +396,51 @@ local function createDropdown(parent, placeholder, options, callback)
             end
         end
     end)
-    
+   
     local dropObj = {selected = selected, setSelected = setSelected, updateOptions = updateOptions, getValue = function() return selected end}
     return container, dropObj
 end
-
 local function createMultiSelector(parent, placeholder, options, defaultSelected, callback)
     local container = createFrame(parent, UDim2.new(1, 0, 0, 30))
-    local button = createButton(container, "")
+    local button = createButton(container, placeholder or "Select...")
     button:SetAttribute("bgType", "accent")
-    local label = createLabel(button, placeholder or "Select...", UDim2.new(1, -20, 1, 0), UDim2.new(0, 10, 0, 0))
-    
+   
     local selected = copyTable(defaultSelected or {})
     local function updateLabel()
         local selText = #selected > 0 and table.concat(selected, ", ") or placeholder
         if #selText > 20 then selText = string.sub(selText, 1, 20) .. "..." end
+        local label = button:FindFirstChildOfClass("TextLabel")
         TweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
         label.Text = selText
         TweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
         callback(selected)
     end
-    
+   
     local dropdownFrame = createFrame(container, UDim2.new(1, 0, 0, 0), UDim2.new(0, 0, 1, 5))
     dropdownFrame.Visible = false
     dropdownFrame.Size = UDim2.new(1, 0, 0, 0)
-    
+   
     local listLayout = Instance.new("UIListLayout")
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Padding = UDim.new(0, 0)
     listLayout.Parent = dropdownFrame
-    
+   
     local optElements = {}
     for i, option in ipairs(options) do
         local optContainer = createFrame(dropdownFrame, UDim2.new(1, 0, 0, 30))
         createLabel(optContainer, option, UDim2.new(0.8, 0, 1, 0))
-        
+       
         local check = createFrame(optContainer, UDim2.new(0, 20, 0.6, 0), UDim2.new(1, -30, 0.2, 0))
         check:SetAttribute("bgType", "background")
         local checkCorner = Instance.new("UICorner")
         checkCorner.CornerRadius = UDim.new(0, 3)
         checkCorner.Parent = check
-        
+       
         local isSelected = table.find(selected, option) ~= nil
         check.BackgroundColor3 = isSelected and colors.toggleOn or colors.background
-        
+       
         optElements[i] = {option = option, check = check}
-        
+       
         optContainer.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isSelected = not isSelected
@@ -474,7 +460,7 @@ local function createMultiSelector(parent, placeholder, options, defaultSelected
             end
         end)
     end
-    
+   
     local function updateChecks()
         for _, el in ipairs(optElements) do
             local isSel = table.find(selected, el.option) ~= nil
@@ -483,7 +469,7 @@ local function createMultiSelector(parent, placeholder, options, defaultSelected
         end
         updateLabel()
     end
-    
+   
     local open = false
     local outsideConnection
     button.Activated:Connect(function()
@@ -520,7 +506,7 @@ local function createMultiSelector(parent, placeholder, options, defaultSelected
             end
         end
     end)
-    
+   
     local multiObj = {selected = selected, getValue = function() return copyTable(selected) end, setValue = function(newSel)
         selected = copyTable(newSel)
         updateChecks()
@@ -529,11 +515,10 @@ local function createMultiSelector(parent, placeholder, options, defaultSelected
     updateLabel()
     return container, multiObj
 end
-
 local function createKeybind(parent, flag, callback, defaultKey)
     local container = createFrame(parent, UDim2.new(1, 0, 0, 30))
     local label = createLabel(container, flag .. ": ", UDim2.new(0.7, 0, 1, 0))
-    
+   
     local keyLabel = createLabel(container, "", UDim2.new(0.25, 0, 1, 0), UDim2.new(0.75, 0, 0, 0))
     keyLabel.BackgroundTransparency = 0
     keyLabel.BackgroundColor3 = colors.accent
@@ -544,7 +529,7 @@ local function createKeybind(parent, flag, callback, defaultKey)
     local keyCorner = Instance.new("UICorner")
     keyCorner.CornerRadius = UDim.new(0, 4)
     keyCorner.Parent = keyLabel
-    
+   
     local binding = false
     local currentKey = defaultKey or Enum.KeyCode.Unknown
     local function setKey(key)
@@ -554,14 +539,14 @@ local function createKeybind(parent, flag, callback, defaultKey)
         TweenService:Create(keyLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
         callback(key)
     end
-    
+   
     keyLabel.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             binding = true
             keyLabel.Text = "..."
         end
     end)
-    
+   
     local keyConnection
     keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if binding and not gameProcessed and input.KeyCode ~= Enum.KeyCode.Unknown then
@@ -570,11 +555,10 @@ local function createKeybind(parent, flag, callback, defaultKey)
             keyConnection:Disconnect()
         end
     end)
-    
+   
     setKey(currentKey)
     return container, {getValue = function() return currentKey end, setValue = setKey}
 end
-
 local function createTextBox(parent, placeholder, defaultText, callback)
     local textbox = Instance.new("TextBox")
     textbox.Size = UDim2.new(1, 0, 0, 30)
@@ -590,38 +574,36 @@ local function createTextBox(parent, placeholder, defaultText, callback)
     textbox.ClearTextOnFocus = false
     textbox.Parent = parent
     textbox:SetAttribute("bgType", "accent")
-    
+   
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = textbox
-    
+   
     local stroke = Instance.new("UIStroke")
     stroke.Color = colors.outline
     stroke.Thickness = 1
     stroke.Parent = textbox
-    
+   
     local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local focusTween = TweenService:Create(textbox, tweenInfo, {BackgroundColor3 = colors.outline})
     local normalTween = TweenService:Create(textbox, tweenInfo, {BackgroundColor3 = colors.accent})
-    
+   
     textbox.Focused:Connect(function()
         focusTween:Play()
     end)
-    
+   
     textbox.FocusLost:Connect(function(enterPressed)
         normalTween:Play()
         if enterPressed then
             callback(textbox.Text)
         end
     end)
-    
+   
     local tbObj = {getValue = function() return textbox.Text end, setValue = function(v) textbox.Text = v; callback(v) end}
     return textbox, tbObj
 end
-
 local Tab = {}
 Tab.__index = Tab
-
 function Tab.new(parent, name, isSub, window)
     local self = setmetatable({}, Tab)
     self.Name = name
@@ -640,50 +622,45 @@ function Tab.new(parent, name, isSub, window)
     self.ScrollingFrame.ScrollBarImageColor3 = colors.outline
     self.ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.ScrollingFrame.Parent = self.Content
-    
+   
     self.UIListLayout = Instance.new("UIListLayout")
     self.UIListLayout.Padding = UDim.new(0, 5)
     self.UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     self.UIListLayout.Parent = self.ScrollingFrame
-    
+   
     self.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         self.ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, self.UIListLayout.AbsoluteContentSize.Y + 10)
     end)
     return self
 end
-
 function Tab:AddLabel(text)
     local lbl = createLabel(self.ScrollingFrame, text)
     local lblTween = TweenService:Create(lbl, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     lblTween:Play()
     return lbl
 end
-
 function Tab:AddButton(text, callback)
     local btn = createButton(self.ScrollingFrame, text, callback)
     local btnTween = TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     btnTween:Play()
     return btn
 end
-
 function Tab:AddToggle(text, defaultState, callback)
     local container, toggleData = createToggle(self.ScrollingFrame, text, defaultState, callback)
     local obj = {getValue = function() return toggleData.state end, setValue = function(v) toggleData.state = v; toggleData.updateState() end}
     table.insert(self.window.toggles, obj)
     local containerTween = TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     containerTween:Play()
-    return container
+    return container, obj
 end
-
 function Tab:AddSlider(text, min, max, defaultValue, callback)
     local container, sliderData = createSlider(self.ScrollingFrame, text, min, max, defaultValue, callback)
     local obj = {getValue = function() return sliderData.value end, setValue = function(v) sliderData.updateValue(v) end}
     table.insert(self.window.sliders, obj)
     local containerTween = TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     containerTween:Play()
-    return container
+    return container, obj
 end
-
 function Tab:AddDropdown(placeholder, options, callback)
     local container, dropData = createDropdown(self.ScrollingFrame, placeholder, options, callback)
     local obj = dropData
@@ -692,33 +669,29 @@ function Tab:AddDropdown(placeholder, options, callback)
     containerTween:Play()
     return container, obj
 end
-
 function Tab:AddMultiSelector(placeholder, options, defaultSelected, callback)
     local container, multiData = createMultiSelector(self.ScrollingFrame, placeholder, options, defaultSelected, callback)
     local obj = multiData
     table.insert(self.window.multis, obj)
     local containerTween = TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     containerTween:Play()
-    return container
+    return container, obj
 end
-
 function Tab:AddKeybind(flag, callback, defaultKey)
     local container, keyData = createKeybind(self.ScrollingFrame, flag, callback, defaultKey)
     local obj = keyData
     table.insert(self.window.keybinds, obj)
     local containerTween = TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     containerTween:Play()
-    return container
+    return container, obj
 end
-
 function Tab:AddTextBox(placeholder, defaultText, callback)
     local tb, tbObj = createTextBox(self.ScrollingFrame, placeholder, defaultText, callback)
     table.insert(self.window.textboxes, tbObj)
     local tbTween = TweenService:Create(tb, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     tbTween:Play()
-    return tb
+    return tb, tbObj
 end
-
 function Tab:AddTab(name)
     local subContainer = createFrame(self.ScrollingFrame, UDim2.new(1, 0, 0, 200))
     local subLayout = Instance.new("UIListLayout")
@@ -733,26 +706,25 @@ function Tab:AddTab(name)
     subTween:Play()
     return subTab
 end
-
 function UI:CreateWindow(title, size, position)
     local player = game.Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
-    
+   
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "UILibraryWindow"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
-    
+   
     local mainFrame = createFrame(screenGui, UDim2.new(0, 0, 0, 0), UDim2.new(0.5, 0, 0.5, 0), "Window")
     mainFrame:SetAttribute("originalSize", size or UDim2.new(0, 300, 0, 400))
     mainFrame:SetAttribute("originalPosition", position or UDim2.new(0.5, -150, 0.5, -200))
-    
+   
     local titleLabel = createLabel(mainFrame, title, UDim2.new(1, -70, 0, 40), UDim2.new(0, 10, 0, 0))
     titleLabel.BackgroundTransparency = 0
     titleLabel.BackgroundColor3 = colors.accent
     titleLabel:SetAttribute("bgType", "accent")
     makeDraggable(titleLabel)
-    
+   
     local closeButton = createButton(mainFrame, "X", function()
         local closeTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 0, 0, 0)})
         closeTween:Play()
@@ -764,19 +736,19 @@ function UI:CreateWindow(title, size, position)
     closeButton:SetAttribute("bgType", "toggleOn")
     closeButton.Size = UDim2.new(0, 20, 0, 20)
     closeButton.Position = UDim2.new(1, -25, 0, 10)
-    
+   
     local tabBar = createFrame(mainFrame, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 40))
     tabBar.BackgroundColor3 = colors.accent
     tabBar:SetAttribute("bgType", "accent")
-    
+   
     local tabListLayout = Instance.new("UIListLayout")
     tabListLayout.FillDirection = Enum.FillDirection.Horizontal
     tabListLayout.Padding = UDim.new(0, 5)
     tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     tabListLayout.Parent = tabBar
-    
+   
     local contentContainer = createFrame(mainFrame, UDim2.new(1, 0, 1, -70), UDim2.new(0, 0, 0, 70))
-    
+   
     local tabs = {}
     local currentTab = nil
     local hasSettings = false
@@ -909,7 +881,7 @@ function UI:CreateWindow(title, size, position)
             end)
         end
         settingsTab:AddLabel("Config Manager")
-        local nameTB = settingsTab:AddTextBox("Config Name", "", function() end)
+        local nameTB, _ = settingsTab:AddTextBox("Config Name", "", function() end)
         settingsTab:AddButton("Save Config", function()
             local name = nameTB.Text
             if name == "" then return end
@@ -936,7 +908,7 @@ function UI:CreateWindow(title, size, position)
             end
         end)
     end
-    
+   
     local function switchTab(tab)
         local oldTab = currentTab
         currentTab = tab
@@ -956,39 +928,31 @@ function UI:CreateWindow(title, size, position)
             enterTween:Play()
         end
     end
-    
+   
     animateIn(mainFrame)
     return window
 end
-
 function UI:CreateButton(parent, text, callback)
     return createButton(parent, text, callback)
 end
-
 function UI:CreateToggle(parent, text, defaultState, callback)
     return createToggle(parent, text, defaultState, callback)
 end
-
 function UI:CreateSlider(parent, text, min, max, defaultValue, callback)
     return createSlider(parent, text, min, max, defaultValue, callback)
 end
-
 function UI:CreateDropdown(parent, placeholder, options, callback)
     return createDropdown(parent, placeholder, options, callback)
 end
-
 function UI:CreateMultiSelector(parent, placeholder, options, defaultSelected, callback)
     return createMultiSelector(parent, placeholder, options, defaultSelected, callback)
 end
-
 function UI:CreateKeybind(parent, flag, callback, defaultKey)
     return createKeybind(parent, flag, callback, defaultKey)
 end
-
 function UI:CreateTextBox(parent, placeholder, defaultText, callback)
     return createTextBox(parent, placeholder, defaultText, callback)
 end
-
 function UI:LoadConfig(jsonString)
     local success, config = pcall(function()
         return HttpService:JSONDecode(jsonString)
@@ -1000,7 +964,6 @@ function UI:LoadConfig(jsonString)
         return {}
     end
 end
-
 function UI:SaveConfig(config)
     local success, json = pcall(function()
         return HttpService:JSONEncode(config)
@@ -1012,5 +975,4 @@ function UI:SaveConfig(config)
         return nil
     end
 end
-
 return UI
