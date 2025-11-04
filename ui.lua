@@ -15,12 +15,10 @@ function UI:CreateWindow(config)
     window.AnchorPoint = Vector2.new(0.5,0.5)
     window.ClipsDescendants = true
     window.Name = "DachshundHubWindow"
-    window.Parent = config.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-
+    window.Parent = config.Parent or Players.LocalPlayer:WaitForChild("PlayerGui")
     local outline = Instance.new("UICorner")
     outline.CornerRadius = UDim.new(0, 10)
     outline.Parent = window
-
     local border = Instance.new("Frame")
     border.Size = UDim2.new(1, 4, 1, 4)
     border.Position = UDim2.new(0, -2, 0, -2)
@@ -30,7 +28,6 @@ function UI:CreateWindow(config)
     local borderCorner = Instance.new("UICorner")
     borderCorner.CornerRadius = UDim.new(0, 12)
     borderCorner.Parent = border
-
     local title = Instance.new("TextLabel")
     title.Text = "Dachshund Hub"
     title.TextColor3 = config.TextColor or Color3.fromRGB(255,255,255)
@@ -39,27 +36,22 @@ function UI:CreateWindow(config)
     title.TextSize = 18
     title.Size = UDim2.new(1, 0, 0, 30)
     title.Parent = window
-
     local tabsFrame = Instance.new("Frame")
     tabsFrame.Size = UDim2.new(0, 100, 1, -30)
     tabsFrame.Position = UDim2.new(1, -100, 0, 30)
     tabsFrame.BackgroundTransparency = 1
     tabsFrame.Parent = window
-
     local tabsDivider = Instance.new("Frame")
     tabsDivider.Size = UDim2.new(0, 2, 1, -30)
     tabsDivider.Position = UDim2.new(1, -102, 0, 30)
     tabsDivider.BackgroundColor3 = config.OutlineColor or Color3.fromRGB(0, 162, 255)
     tabsDivider.BorderSizePixel = 0
     tabsDivider.Parent = window
-
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, -104, 1, -30)
     contentFrame.Position = UDim2.new(0, 0, 0, 30)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = window
-
-    -- Dragging
     local dragging, dragInput, dragStart, startPos
     local function update(input)
         local delta = input.Position - dragStart
@@ -87,12 +79,9 @@ function UI:CreateWindow(config)
             update(input)
         end
     end)
-
-    -- Animations
     window.Visible = false
     window:TweenSize(window.Size, Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.3, true)
     window.Visible = true
-
     return {
         Window = window,
         Tabs = tabsFrame,
@@ -134,6 +123,83 @@ function UI:CreateWindow(config)
                         toggle.Text = name.." ["..(toggled and "ON" or "OFF").."]"
                         callback(toggled)
                     end)
+                end,
+                AddButton = function(_, name, callback)
+                    local btn = Instance.new("TextButton")
+                    btn.Text = name
+                    btn.Size = UDim2.new(1, -10, 0, 30)
+                    btn.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren()*35)
+                    btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+                    btn.TextColor3 = Color3.fromRGB(255,255,255)
+                    btn.Parent = tabContent
+                    btn.MouseButton1Click:Connect(callback)
+                end,
+                AddSlider = function(_, name, min, max, default, callback)
+                    local sliderFrame = Instance.new("Frame")
+                    sliderFrame.Size = UDim2.new(1, -10, 0, 30)
+                    sliderFrame.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren()*35)
+                    sliderFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+                    sliderFrame.Parent = tabContent
+                    local sliderName = Instance.new("TextLabel")
+                    sliderName.Text = name.." "..default
+                    sliderName.Size = UDim2.new(1,0,1,0)
+                    sliderName.TextColor3 = Color3.fromRGB(255,255,255)
+                    sliderName.BackgroundTransparency = 1
+                    sliderName.Parent = sliderFrame
+                    local dragging = false
+                    sliderFrame.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+                    end)
+                    sliderFrame.InputEnded:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+                    end)
+                    UserInputService.InputChanged:Connect(function(input)
+                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                            local mouse = UserInputService:GetMouseLocation()
+                            local relativeX = math.clamp(mouse.X - sliderFrame.AbsolutePosition.X, 0, sliderFrame.AbsoluteSize.X)
+                            local value = min + (relativeX/sliderFrame.AbsoluteSize.X)*(max-min)
+                            sliderName.Text = name.." "..math.floor(value)
+                            callback(value)
+                        end
+                    end)
+                end,
+                AddTextInput = function(_, name, callback)
+                    local inputBox = Instance.new("TextBox")
+                    inputBox.PlaceholderText = name
+                    inputBox.Size = UDim2.new(1, -10, 0, 30)
+                    inputBox.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren()*35)
+                    inputBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
+                    inputBox.TextColor3 = Color3.fromRGB(255,255,255)
+                    inputBox.ClearTextOnFocus = false
+                    inputBox.Parent = tabContent
+                    inputBox.FocusLost:Connect(function()
+                        callback(inputBox.Text)
+                    end)
+                end,
+                AddDivider = function(_, name)
+                    local div = Instance.new("TextLabel")
+                    div.Text = name
+                    div.Size = UDim2.new(1, -10, 0, 20)
+                    div.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren()*25)
+                    div.BackgroundTransparency = 1
+                    div.TextColor3 = Color3.fromRGB(100,100,100)
+                    div.TextXAlignment = Enum.TextXAlignment.Left
+                    div.Font = Enum.Font.GothamBold
+                    div.TextSize = 14
+                    div.Parent = tabContent
+                end,
+                AddSection = function(_, name)
+                    local sec = Instance.new("Frame")
+                    sec.Size = UDim2.new(1, -10, 0, 50)
+                    sec.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren()*55)
+                    sec.BackgroundColor3 = Color3.fromRGB(30,30,30)
+                    local secLabel = Instance.new("TextLabel")
+                    secLabel.Text = name
+                    secLabel.Size = UDim2.new(1,0,0,20)
+                    secLabel.TextColor3 = Color3.fromRGB(255,255,255)
+                    secLabel.BackgroundTransparency = 1
+                    secLabel.Parent = sec
+                    sec.Parent = tabContent
                 end
             }
         end
