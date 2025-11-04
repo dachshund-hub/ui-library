@@ -127,6 +127,7 @@ local function createLabel(parent, text, size, position)
     label.TextColor3 = colors.text
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = parent
     return label
 end
@@ -746,11 +747,10 @@ function UI:CreateWindow(title, size, position)
     mainFrame:SetAttribute("originalSize", size or UDim2.new(0, 300, 0, 400))
     mainFrame:SetAttribute("originalPosition", position or UDim2.new(0.5, -150, 0.5, -200))
     
-    local titleLabel = createLabel(mainFrame, title, UDim2.new(1, 0, 0, 40))
+    local titleLabel = createLabel(mainFrame, title, UDim2.new(1, -70, 0, 40), UDim2.new(0, 10, 0, 0))
     titleLabel.BackgroundTransparency = 0
     titleLabel.BackgroundColor3 = colors.accent
     titleLabel:SetAttribute("bgType", "accent")
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
     makeDraggable(titleLabel)
     
     local closeButton = createButton(mainFrame, "X", function()
